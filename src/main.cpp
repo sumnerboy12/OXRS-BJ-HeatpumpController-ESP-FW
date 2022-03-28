@@ -62,7 +62,7 @@ WiFiServer _server(REST_API_PORT);
 OXRS_API _api(_mqtt);
 
 // Logging (MQTT only since heatpump uses serial)
-MqttLogger _logger(_mqttClient, "log", MqttLoggerMode::MqttOnly);
+MqttLogger _logger(_mqttClient, "log", MqttLoggerMode::MqttAndSerial);
 
 // heatpump client
 HeatPump _heatpump;
@@ -198,7 +198,7 @@ void getCommandSchemaJson(JsonVariant json)
   
   // Command schema metadata
   commandSchema["$schema"] = JSON_SCHEMA_VERSION;
-  commandSchema["title"] = STRINGIFY(FW_NAME);
+  commandSchema["title"] = STRINGIFY(FW_SHORT_NAME);
   commandSchema["type"] = "object";
 
   JsonObject properties = commandSchema.createNestedObject("properties");
@@ -379,6 +379,21 @@ void _mqttCommand(JsonVariant json)
 /**
   Initialisation
 */
+void initialiseSerial()
+{
+  Serial.begin(SERIAL_BAUD_RATE);
+  delay(1000);
+  
+  _logger.println(F("[hpmp] starting up..."));
+
+  DynamicJsonDocument json(128);
+  getFirmwareJson(json.as<JsonVariant>());
+
+  _logger.print(F("[hpmp] "));
+  serializeJson(json, _logger);
+  _logger.println();
+}
+
 void initialseWifi(byte * mac)
 {
   // Ensure we are in the correct WiFi mode
@@ -401,10 +416,10 @@ void initialseWifi(byte * mac)
   sprintf_P(mac_display, PSTR("%02X:%02X:%02X:%02X:%02X:%02X"), mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
   // Display MAC/IP addresses on serial
-  Serial.print(F("[hpmp] mac address: "));
-  Serial.println(mac_display);  
-  Serial.print(F("[hpmp] ip address: "));
-  Serial.println(WiFi.localIP());
+  _logger.print(F("[hpmp] mac address: "));
+  _logger.println(mac_display);  
+  _logger.print(F("[hpmp] ip address: "));
+  _logger.println(WiFi.localIP());
 }
 
 void initialiseMqtt(byte * mac)
@@ -442,7 +457,9 @@ void initialiseHeatpump()
 {
   // Give the serial port time to display this message before
   // initialising the serial connection to the heat pump
-  Serial.println(F("[hpmp] starting serial connection to heatpump (no more serial logging)"));
+  _logger.println(F("[hpmp] starting serial connection to heatpump (no more serial logging)"));
+  _logger.setMode(MqttLoggerMode::MqttOnly);
+
   delay(1000);
   
   _heatpump.setSettingsChangedCallback(hpSettingsChanged);
@@ -461,17 +478,9 @@ void setup()
   // the stack size at runtime (see getStackSize())
   char stack;
   stackStart = &stack;
-  
-  // Start serial and let settle
-  Serial.begin(SERIAL_BAUD_RATE);
-  delay(1000);
 
-  // Dump firmware details to serial
-  _logger.println(F("========================================"));
-  _logger.print  (F("FIRMWARE: ")); _logger.println(STRINGIFY(FW_NAME));
-  _logger.print  (F("MAKER:    ")); _logger.println(STRINGIFY(FW_MAKER));
-  _logger.print  (F("VERSION:  ")); _logger.println(STRINGIFY(FW_VERSION));
-  _logger.println(F("========================================"));
+  // Set up serial
+  initialiseSerial();  
 
   // Set up network and obtain an IP address
   byte mac[6];
