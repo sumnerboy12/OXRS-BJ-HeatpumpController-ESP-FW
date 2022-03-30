@@ -172,6 +172,7 @@ void getNetworkJson(JsonVariant json)
 
   JsonObject network = json.createNestedObject("network");
 
+  network["mode"] = "wifi";
   network["ip"] = WiFi.localIP();
   network["mac"] = mac_display;
 }
