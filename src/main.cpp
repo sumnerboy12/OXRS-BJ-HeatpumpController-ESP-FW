@@ -507,7 +507,7 @@ void loop()
 
   // Handle any REST API requests
   WiFiClient client = _server.available();
-  _api.checkWifi(&client);
+  _api.loop(&client);
 
   // Check for any updates to the heatpump
   _heatpump.sync();
