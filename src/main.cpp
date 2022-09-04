@@ -369,7 +369,7 @@ void _mqttCommand(JsonVariant json)
     // dump the packet so we can see what it is
     // handy because you can run the code without connecting the ESP to the heatpump, 
     // and test sending custom packets
-    hpPacketDebug(bytes, byteCount, "customPacket");
+    hpPacketDebug(bytes, byteCount, (char*)"customPacket");
 
     // send the pack to the heatpump for processing
     _heatpump.sendCustomPacket(bytes, byteCount);
