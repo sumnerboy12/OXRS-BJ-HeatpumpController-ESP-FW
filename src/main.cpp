@@ -263,6 +263,9 @@ void getCommandSchemaJson(JsonVariant json)
 
   JsonObject custom = properties.createNestedObject("custom");
   custom["type"] = "string";
+
+  JsonObject restart = properties.createNestedObject("restart");
+  restart["type"] = "boolean";
 }
 
 /**
@@ -371,6 +374,11 @@ void _mqttCommand(JsonVariant json)
     // send the pack to the heatpump for processing
     _heatpump.sendCustomPacket(bytes, byteCount);
   } 
+
+  if (json.containsKey("restart") && json["restart"].as<bool>())
+  {
+    ESP.restart();
+  }
 }
 
 /**
