@@ -7,10 +7,6 @@
   Copyright 2023 Ben Jones <ben.jones12@gmail.com>
 */
 
-/*--------------------------- Macros ----------------------------------*/
-#define STRINGIFY(s) STRINGIFY1(s)
-#define STRINGIFY1(s) #s
-
 /*--------------------------- Libraries -------------------------------*/
 #include <Arduino.h>
 #include <HeatPump.h>
