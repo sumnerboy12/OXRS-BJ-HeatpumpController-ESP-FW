@@ -20,9 +20,6 @@ OXRS_8266 oxrs;
 #endif
 
 /*--------------------------- Constants -------------------------------*/
-// Serial
-#define       SERIAL_BAUD_RATE        9600
-
 // How often to publish the internal heatpump temperature
 #define       PUBLISH_TEMP_MS         60000
 
@@ -257,10 +254,6 @@ void jsonCommand(JsonVariant json)
 */
 void setup() 
 {
-  Serial.begin(SERIAL_BAUD_RATE);
-  delay(1000);  
-  Serial.println(F("[hpmp] starting up..."));
-
   // Start hardware
   oxrs.begin(jsonConfig, jsonCommand);
 
@@ -274,8 +267,8 @@ void setup()
   heatpump.setPacketCallback(hpPacketDebug);  
 
   // Initialise the serial connection to the heat pump
-  oxrs.println(F("[hpmp] starting connection to heatpump on Serial1"));
-  heatpump.connect(&Serial1);
+  oxrs.println(F("[hpmp] starting connection to heatpump over serial"));
+  heatpump.connect(&Serial);
 }
 
 /**
