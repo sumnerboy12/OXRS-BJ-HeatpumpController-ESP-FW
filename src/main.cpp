@@ -65,12 +65,11 @@ void hpSettingsChanged()
 
 void hpStatusChanged(heatpumpStatus status) 
 {
-  const size_t bufferSize = JSON_OBJECT_SIZE(9);
+  const size_t bufferSize = JSON_OBJECT_SIZE(8);
   DynamicJsonDocument json(bufferSize);
   
   json["roomTemperature"]       = status.roomTemperature;
   json["operating"]             = status.operating;
-  json["compressorFrequency"]   = status.compressorFrequency;
 
   JsonObject timers = json.createNestedObject("timers");  
   timers["mode"]                = status.timers.mode;
@@ -114,7 +113,10 @@ void setCommandSchema()
   
   // Firmware commands
   JsonObject power = json.createNestedObject("power");
-  power["type"] = "boolean";
+  power["type"] = "string";
+  JsonArray powerEnum = power.createNestedArray("enum");
+  powerEnum.add("OFF");
+  powerEnum.add("ON");
 
   JsonObject mode = json.createNestedObject("mode");
   mode["type"] = "string";
@@ -184,7 +186,7 @@ void jsonCommand(JsonVariant json)
 {
   if (json.containsKey("power"))
   {
-    heatpump.setPowerSetting(json["power"].as<boolean>());
+    heatpump.setPowerSetting(json["power"].as<const char *>());
   }
 
   if (json.containsKey("mode"))
