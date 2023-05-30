@@ -184,34 +184,42 @@ void jsonConfig(JsonVariant json)
 
 void jsonCommand(JsonVariant json)
 {
+  bool update = false;
+
   if (json.containsKey("power"))
   {
     heatpump.setPowerSetting(json["power"].as<const char *>());
+    update = true;
   }
 
   if (json.containsKey("mode"))
   {
     heatpump.setModeSetting(json["mode"].as<const char *>());
+    update = true;
   }
 
   if (json.containsKey("temperature"))
   {
     heatpump.setTemperature(json["temperature"].as<float>());
+    update = true;
   }
 
   if (json.containsKey("fan"))
   {
     heatpump.setFanSpeed(json["fan"].as<const char *>());
+    update = true;
   }
 
   if (json.containsKey("vane"))
   {
     heatpump.setVaneSetting(json["vane"].as<const char *>());
+    update = true;
   }
 
   if (json.containsKey("wideVane"))
   {
     heatpump.setWideVaneSetting(json["wideVane"].as<const char *>());
+    update = true;
   }
 
   if (json.containsKey("remoteTemp"))
@@ -248,7 +256,10 @@ void jsonCommand(JsonVariant json)
 
     // send the pack to the heatpump for processing
     heatpump.sendCustomPacket(bytes, byteCount);
-  } 
+  }
+
+  // do we need to send any updated settings
+  if (update) heatpump.update();
 }
 
 /**
