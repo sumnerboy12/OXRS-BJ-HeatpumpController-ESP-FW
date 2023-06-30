@@ -279,6 +279,9 @@ void setup()
   heatpump.setStatusChangedCallback(hpStatusChanged);
   heatpump.setPacketCallback(hpPacketDebug);  
 
+  // Turn on auto-update, so our state is always master
+  heatpump.enableAutoUpdate();
+
   // Initialise the serial connection to the heat pump
   oxrs.println(F("[hpmp] starting connection to heatpump over serial"));
   heatpump.connect(&Serial);
