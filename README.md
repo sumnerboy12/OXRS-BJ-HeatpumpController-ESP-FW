@@ -8,7 +8,11 @@ That library contains documentation and installation instructions as well as exa
 
 If you want to integrate your heatpump with Home Assistant the following YAML might help. 
 
-You will just need to change all the topics to match your MQTT client ID.
+The resulting widget in Home Assistant should look something like;
+
+![image](https://github.com/sumnerboy12/OXRS-BJ-HeatpumpController-ESP-FW/assets/5060842/266a661f-6a4f-4a6f-9780-ab798e042b92)
+
+You will just need to change all the topics to match your MQTT client ID in the code below;
 
 ```yaml
 mqtt:
