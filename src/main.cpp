@@ -10,6 +10,7 @@
 /*--------------------------- Libraries -------------------------------*/
 #include <Arduino.h>
 #include <HeatPump.h>
+#include <OXRS_HASS.h>
 
 #if defined(OXRS_WT32_ETH01)
 #include <OXRS_WT32ETH01.h>
@@ -38,9 +39,15 @@ uint32_t lastRemoteTemp = 0L;
 // enabled/disabled by sending '{"debug": true|false}' to the command topic
 bool debugEnabled       = false;
 
+// only want to publish the home assistant discovery config once
+bool hassDiscoveryPublished = false;
+
 /*--------------------------- Instantiate Globals ---------------------*/
 // heatpump client
 HeatPump heatpump;
+
+// home assistant discovery config
+OXRS_HASS hass(oxrs.getMQTT());
 
 /*--------------------------- Program ---------------------------------*/
 /**
@@ -96,11 +103,14 @@ void hpPacketDebug(byte * packet, unsigned int length, char * packetDirection)
 void setConfigSchema()
 {
   // Define our config schema
-  StaticJsonDocument<64> json;
+  StaticJsonDocument<1024> json;
 
   // Firmware config
   JsonObject debug = json.createNestedObject("debug");
   debug["type"] = "boolean";
+
+  // Add any Home Assistant config
+  hass.setConfigSchema(json);
 
   // Pass our config schema down to the hardware library
   oxrs.setConfigSchema(json.as<JsonVariant>());
@@ -180,6 +190,9 @@ void jsonConfig(JsonVariant json)
   {
     debugEnabled = json["debug"].as<bool>();
   }
+
+  // Handle any Home Assistant config
+  hass.parseConfig(json);
 }
 
 void jsonCommand(JsonVariant json)
@@ -262,6 +275,65 @@ void jsonCommand(JsonVariant json)
   if (update) heatpump.update();
 }
 
+void publishHassDiscovery()
+{
+  if (hassDiscoveryPublished)
+    return;
+
+  char topic[64];
+
+  char component[8];
+  sprintf_P(component, PSTR("climate"));
+
+  char id[8];
+  sprintf_P(id, PSTR("hvac"));
+
+  DynamicJsonDocument json(2048);
+  hass.getDiscoveryJson(json, id);
+
+  json["name"] = "Heatpump";
+  json["opt"] = true;
+
+  json["curr_temp_t"] = oxrs.getMQTT()->getTelemetryTopic(topic);
+  json["curr_temp_tpl"] = "{{ value_json.roomTemperature }}";
+
+  JsonArray fanModes = json.createNestedArray("fan_modes");
+  fanModes.add("auto");
+  fanModes.add("1");
+  fanModes.add("2");
+  fanModes.add("3");
+  fanModes.add("4");
+
+  json["fan_mode_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
+  json["fan_mode_cmd_tpl"] = "{\"fan\": \"{{ value | upper }}\"}";
+  json["fan_mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
+  json["fan_mode_stat_tpl"] = "{{ value_json.fan | lower }}";
+
+  JsonArray modes = json.createNestedArray("modes");
+  modes.add("off");
+  modes.add("heat");
+  modes.add("dry");
+  modes.add("cool");
+  modes.add("auto");
+
+  json["mode_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
+  json["mode_cmd_tpl"] = "{% if value == \"off\" %}{\"power\": \"OFF\"}{% else %}{\"power\": \"ON\", \"mode\": \"{{ value | upper }}\"}{% endif %}";
+  json["mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
+  json["mode_stat_tpl"] = "{% if value_json.power == \"OFF\" %}off{% else %}{{ value_json.mode | lower }}{% endif %}";
+
+  json["power_command_topic"] = oxrs.getMQTT()->getCommandTopic(topic);
+  json["power_command_template"] = "{\"power\": \"{{ value }}\"}";
+
+  json["temp_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
+  json["temp_cmd_tpl"] = "{\"temperature\": {{ value }}}";
+  json["temp_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
+  json["temp_stat_tpl"] = "{{ value_json.temperature }}";
+  json["temp_unit"] = "C";
+
+  // Only publish once on boot
+  hassDiscoveryPublished = hass.publishDiscoveryJson(json, component, id);
+}
+
 /**
   Setup
 */
@@ -308,5 +380,11 @@ void loop()
   if ((millis() - lastRemoteTemp) >= REMOTE_TEMP_TIMEOUT_MS) {
     heatpump.setRemoteTemperature(0);
     lastRemoteTemp = millis();
+  }
+
+   // Check if we need to publish any Home Assistant discovery payloads
+  if (hass.isDiscoveryEnabled())
+  {
+    publishHassDiscovery();
   }
 }
