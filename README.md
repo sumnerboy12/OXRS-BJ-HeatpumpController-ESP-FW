@@ -32,7 +32,6 @@ mqtt:
           - heatpump
       fan_modes:
         - 'auto'
-        - 'Quiet'
         - '1'
         - '2'
         - '3'
@@ -40,7 +39,7 @@ mqtt:
       fan_mode_command_topic: cmnd/heatpump
       fan_mode_command_template: '{"fan": "{{ value | upper }}"}'
       fan_mode_state_topic: stat/heatpump
-      fan_mode_state_template: '{% if value_json.fan == "QUIET" %}Quiet{% else %}{{ value_json.fan | lower }}{% endif %}'
+      fan_mode_state_template: '{{ value_json.fan | lower }}'
       modes:
         - 'off'
         - 'heat'
