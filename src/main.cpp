@@ -305,7 +305,7 @@ void publishHassDiscovery()
   fanModes.add("4");
 
   json["fan_mode_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
-  json["fan_mode_cmd_tpl"] = "{\"fan\": \"{{ value | upper }}\"}";
+  json["fan_mode_cmd_tpl"] = "{\"fan\":\"{{ value | upper }}\"}";
   json["fan_mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
   json["fan_mode_stat_tpl"] = "{{ value_json.fan | lower }}";
 
@@ -317,15 +317,15 @@ void publishHassDiscovery()
   modes.add("auto");
 
   json["mode_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
-  json["mode_cmd_tpl"] = "{% if value == \"off\" %}{\"power\": \"OFF\"}{% else %}{\"power\": \"ON\", \"mode\": \"{{ value | upper }}\"}{% endif %}";
+  json["mode_cmd_tpl"] = "{% if value == 'off' %}{\"power\":\"OFF\"}{% else %}{\"power\":\"ON\",\"mode\":\"{{ value | upper }}\"}{% endif %}";
   json["mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
-  json["mode_stat_tpl"] = "{% if value_json.power == \"OFF\" %}off{% else %}{{ value_json.mode | lower }}{% endif %}";
+  json["mode_stat_tpl"] = "{% if value_json.power == 'OFF' %}off{% else %}{{ value_json.mode | lower }}{% endif %}";
 
   json["power_command_topic"] = oxrs.getMQTT()->getCommandTopic(topic);
-  json["power_command_template"] = "{\"power\": \"{{ value }}\"}";
+  json["power_command_template"] = "{\"power\":\"{{ value }}\"}";
 
   json["temp_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
-  json["temp_cmd_tpl"] = "{\"temperature\": {{ value }}}";
+  json["temp_cmd_tpl"] = "{\"temperature\":{{ value }}}";
   json["temp_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
   json["temp_stat_tpl"] = "{{ value_json.temperature }}";
   json["temp_unit"] = "C";
