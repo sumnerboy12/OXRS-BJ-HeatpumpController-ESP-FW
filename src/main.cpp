@@ -35,9 +35,13 @@ uint32_t lastTempSend   = 0L;
 // the last time a remote temp value has been received
 uint32_t lastRemoteTemp = 0L;
 
+// disable syncing with heatpump
+// disable/enable by sending '{"disable": true|false}' to the command topic
+bool disable            = false;
+
 // will send all packets received from the heatpump to the telemetry topic
 // enabled/disabled by sending '{"debug": true|false}' to the command topic
-bool debugEnabled       = false;
+bool debug              = false;
 
 // only want to publish the home assistant discovery config once
 bool hassDiscoveryPublished = false;
@@ -86,7 +90,7 @@ void hpStatusChanged(heatpumpStatus status)
 
 void hpPacketDebug(byte * packet, unsigned int length, char * packetDirection) 
 {
-  if (!debugEnabled)
+  if (!debug)
     return;
   
   String message;
@@ -111,6 +115,9 @@ void setConfigSchema()
   JsonDocument json;
 
   // Firmware config
+  JsonObject disable = json["disable"].to<JsonObject>();
+  disable["type"] = "boolean";
+
   JsonObject debug = json["debug"].to<JsonObject>();
   debug["type"] = "boolean";
 
@@ -191,9 +198,14 @@ void setCommandSchema()
 
 void jsonConfig(JsonVariant json)
 {
+  if (json.containsKey("disable"))
+  {
+    disable = json["disable"].as<bool>();
+  }
+
   if (json.containsKey("debug"))
   {
-    debugEnabled = json["debug"].as<bool>();
+    debug = json["debug"].as<bool>();
   }
 
   // Handle any Home Assistant config
@@ -202,6 +214,10 @@ void jsonConfig(JsonVariant json)
 
 void jsonCommand(JsonVariant json)
 {
+  // Ignore any commands if we are disabled
+  if (disable)
+    return;
+
   bool update = false;
 
   if (json.containsKey("power"))
@@ -356,7 +372,8 @@ void setup()
   heatpump.setStatusChangedCallback(hpStatusChanged);
   heatpump.setPacketCallback(hpPacketDebug);  
 
-  // Turn on auto-update, so our state is always master
+  // Allow control by IR remote
+  heatpump.enableExternalUpdate();
   heatpump.enableAutoUpdate();
 
   // Initialise the serial connection to the heat pump
@@ -372,19 +389,22 @@ void loop()
   // Let hardware handle any events etc
   oxrs.loop();
 
-  // Check for any updates to the heatpump
-  heatpump.sync();
+  // Don't bother syncing with the heatpump if we are disabled
+  if (!disable) {
+    // Check for any updates to the heatpump
+    heatpump.sync();
 
-  // Publish temp periodically
-  if ((millis() - lastTempSend) >= PUBLISH_TEMP_MS) {
-    hpStatusChanged(heatpump.getStatus());
-    lastTempSend = millis();
-  }
+    // Publish temp periodically
+    if ((millis() - lastTempSend) >= PUBLISH_TEMP_MS) {
+      hpStatusChanged(heatpump.getStatus());
+      lastTempSend = millis();
+    }
 
-  // Reset to local temp sensor after 5 minutes of no remote temp udpates
-  if ((millis() - lastRemoteTemp) >= REMOTE_TEMP_TIMEOUT_MS) {
-    heatpump.setRemoteTemperature(0);
-    lastRemoteTemp = millis();
+    // Reset to local temp sensor after 5 minutes of no remote temp udpates
+    if ((millis() - lastRemoteTemp) >= REMOTE_TEMP_TIMEOUT_MS) {
+      heatpump.setRemoteTemperature(0);
+      lastRemoteTemp = millis();
+    }
   }
 
    // Check if we need to publish any Home Assistant discovery payloads
