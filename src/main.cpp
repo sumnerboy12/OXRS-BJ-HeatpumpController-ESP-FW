@@ -89,10 +89,19 @@ void hpPacketDebug(byte * packet, unsigned int length, char * packetDirection)
   if (!debugEnabled)
     return;
   
+  String message;
+  for (unsigned int idx = 0; idx < length; idx++) {
+    // pad single hex digits with a 0
+    if (packet[idx] < 16) {
+      message += "0";
+    }
+    message += String(packet[idx], HEX) + " ";
+  }
+
   oxrs.print(F("[hpmp] ["));
   oxrs.print(packetDirection);
   oxrs.print(F("] "));
-  oxrs.write(packet, length);
+  oxrs.print(message);
   oxrs.println();
 }
 
