@@ -57,9 +57,7 @@ void hpSettingsChanged()
 {
   heatpumpSettings settings = heatpump.getSettings();
 
-  const size_t bufferSize = JSON_OBJECT_SIZE(6);
-  DynamicJsonDocument json(bufferSize);
-
+  JsonDocument json;
   json["power"]       = settings.power;
   json["mode"]        = settings.mode;
   json["temperature"] = settings.temperature;
@@ -72,13 +70,11 @@ void hpSettingsChanged()
 
 void hpStatusChanged(heatpumpStatus status) 
 {
-  const size_t bufferSize = JSON_OBJECT_SIZE(8);
-  DynamicJsonDocument json(bufferSize);
-  
+  JsonDocument json;
   json["roomTemperature"]       = status.roomTemperature;
   json["operating"]             = status.operating;
 
-  JsonObject timers = json.createNestedObject("timers");  
+  JsonObject timers = json["timers"].to<JsonObject>();;  
   timers["mode"]                = status.timers.mode;
   timers["onMinutesSet"]        = status.timers.onMinutesSet;
   timers["onMinutesRemaining"]  = status.timers.onMinutesRemaining;
@@ -103,10 +99,10 @@ void hpPacketDebug(byte * packet, unsigned int length, char * packetDirection)
 void setConfigSchema()
 {
   // Define our config schema
-  StaticJsonDocument<1024> json;
+  JsonDocument json;
 
   // Firmware config
-  JsonObject debug = json.createNestedObject("debug");
+  JsonObject debug = json["debug"].to<JsonObject>();
   debug["type"] = "boolean";
 
   // Add any Home Assistant config
@@ -119,32 +115,32 @@ void setConfigSchema()
 void setCommandSchema()
 {
   // Define our config schema
-  StaticJsonDocument<1024> json;
+  JsonDocument json;
   
   // Firmware commands
-  JsonObject power = json.createNestedObject("power");
+  JsonObject power = json["power"].to<JsonObject>();
   power["type"] = "string";
-  JsonArray powerEnum = power.createNestedArray("enum");
+  JsonArray powerEnum = power["enum"].to<JsonArray>();
   powerEnum.add("OFF");
   powerEnum.add("ON");
 
-  JsonObject mode = json.createNestedObject("mode");
+  JsonObject mode = json["mode"].to<JsonObject>();
   mode["type"] = "string";
-  JsonArray modeEnum = mode.createNestedArray("enum");
+  JsonArray modeEnum = mode["enum"].to<JsonArray>();
   modeEnum.add("HEAT");
   modeEnum.add("DRY");
   modeEnum.add("COOL");
   modeEnum.add("FAN");
   modeEnum.add("AUTO");
 
-  JsonObject temperature = json.createNestedObject("temperature");
+  JsonObject temperature = json["temperature"].to<JsonObject>();
   temperature["type"] = "number";
   temperature["minimum"] = 10;
   temperature["maximum"] = 31;
 
-  JsonObject fan = json.createNestedObject("fan");
+  JsonObject fan = json["fan"].to<JsonObject>();
   fan["type"] = "string";
-  JsonArray fanEnum = fan.createNestedArray("enum");
+  JsonArray fanEnum = fan["enum"].to<JsonArray>();
   fanEnum.add("AUTO");
   fanEnum.add("QUIET");
   fanEnum.add("1");
@@ -152,9 +148,9 @@ void setCommandSchema()
   fanEnum.add("3");
   fanEnum.add("4");
 
-  JsonObject vane = json.createNestedObject("vane");
+  JsonObject vane = json["vane"].to<JsonObject>();
   vane["type"] = "string";
-  JsonArray vaneEnum = vane.createNestedArray("enum");
+  JsonArray vaneEnum = vane["enum"].to<JsonArray>();
   vaneEnum.add("AUTO");
   vaneEnum.add("1");
   vaneEnum.add("2");
@@ -163,9 +159,9 @@ void setCommandSchema()
   vaneEnum.add("5");
   vaneEnum.add("SWING");
 
-  JsonObject wideVane = json.createNestedObject("wideVane");
+  JsonObject wideVane = json["wideVane"].to<JsonObject>();
   wideVane["type"] = "string";
-  JsonArray wideVaneEnum = wideVane.createNestedArray("enum");
+  JsonArray wideVaneEnum = wideVane["enum"].to<JsonArray>();
   wideVaneEnum.add("<<");
   wideVaneEnum.add("<");
   wideVaneEnum.add("|");
@@ -174,10 +170,10 @@ void setCommandSchema()
   wideVaneEnum.add("<>");
   wideVaneEnum.add("SWING");
 
-  JsonObject remoteTemp = json.createNestedObject("remoteTemp");
+  JsonObject remoteTemp = json["remoteTemp"].to<JsonObject>();
   remoteTemp["type"] = "number";
 
-  JsonObject custom = json.createNestedObject("custom");
+  JsonObject custom = json["custom"].to<JsonObject>();
   custom["type"] = "string";
 
   // Pass our command schema down to the hardware library
@@ -288,7 +284,7 @@ void publishHassDiscovery()
   char id[8];
   sprintf_P(id, PSTR("hvac"));
 
-  DynamicJsonDocument json(2048);
+  JsonDocument json;
   hass.getDiscoveryJson(json, id);
 
   json["name"] = "Heatpump";
@@ -297,7 +293,7 @@ void publishHassDiscovery()
   json["curr_temp_t"] = oxrs.getMQTT()->getTelemetryTopic(topic);
   json["curr_temp_tpl"] = "{{ value_json.roomTemperature }}";
 
-  JsonArray fanModes = json.createNestedArray("fan_modes");
+  JsonArray fanModes = json["fan_modes"].to<JsonArray>();
   fanModes.add("auto");
   fanModes.add("1");
   fanModes.add("2");
@@ -309,7 +305,7 @@ void publishHassDiscovery()
   json["fan_mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
   json["fan_mode_stat_tpl"] = "{{ value_json.fan | lower }}";
 
-  JsonArray modes = json.createNestedArray("modes");
+  JsonArray modes = json["modes"].to<JsonArray>();
   modes.add("off");
   modes.add("heat");
   modes.add("dry");
