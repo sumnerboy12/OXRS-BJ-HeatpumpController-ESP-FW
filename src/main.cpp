@@ -111,7 +111,12 @@ void setConfigSchema()
   JsonDocument json;
 
   // Firmware config
+  JsonObject externalUpdate = json["externalUpdate"].to<JsonObject>();
+  externalUpdate["title"] = "Enable IR Control";
+  externalUpdate["type"] = "boolean";
+
   JsonObject debug = json["debug"].to<JsonObject>();
+  debug["title"] = "Enable Debug Logging";
   debug["type"] = "boolean";
 
   // Add any Home Assistant config
@@ -191,6 +196,15 @@ void setCommandSchema()
 
 void jsonConfig(JsonVariant json)
 {
+  if (json.containsKey("externalUpdate"))
+  {
+    if (json["externalUpdate"].as<bool>()) {
+      heatpump.enableExternalUpdate();
+    } else {
+      heatpump.disableExternalUpdate();
+    }
+  }
+
   if (json.containsKey("debug"))
   {
     debugEnabled = json["debug"].as<bool>();
@@ -358,8 +372,7 @@ void setup()
   heatpump.setStatusChangedCallback(hpStatusChanged);
   heatpump.setPacketCallback(hpPacket);  
 
-  // Allow control by IR remote
-  heatpump.enableExternalUpdate();
+  // Turn on auto-update, so our state is always master
   heatpump.enableAutoUpdate();
 
   // Initialise the serial connection to the heat pump
