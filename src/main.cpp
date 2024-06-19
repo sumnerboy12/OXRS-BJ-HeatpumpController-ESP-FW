@@ -356,7 +356,8 @@ void setup()
   heatpump.setStatusChangedCallback(hpStatusChanged);
   heatpump.setPacketCallback(hpPacketDebug);  
 
-  // Turn on auto-update, so our state is always master
+  // Allow control by IR remote
+  heatpump.enableExternalUpdate();
   heatpump.enableAutoUpdate();
 
   // Initialise the serial connection to the heat pump
