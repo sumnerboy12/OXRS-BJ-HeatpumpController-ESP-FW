@@ -84,7 +84,7 @@ void hpStatusChanged(heatpumpStatus status)
   oxrs.publishTelemetry(json.as<JsonVariant>());
 }
 
-void hpPacketDebug(byte * packet, unsigned int length, char * packetDirection) 
+void hpPacket(byte * packet, unsigned int length, char * packetDirection) 
 {
   if (!debugEnabled)
     return;
@@ -270,14 +270,16 @@ void jsonCommand(JsonVariant json)
     // dump the packet so we can see what it is
     // handy because you can run the code without connecting the ESP to the heatpump, 
     // and test sending custom packets
-    hpPacketDebug(bytes, byteCount, (char*)"customPacket");
+    hpPacket(bytes, byteCount, (char*)"customPacket");
 
-    // send the pack to the heatpump for processing
+    // send the packet to the heatpump for processing
     heatpump.sendCustomPacket(bytes, byteCount);
   }
 
-  // do we need to send any updated settings
-  if (update) heatpump.update();
+  // if we have any updates then send and check it was successful
+  if (update && !heatpump.update()) {
+    oxrs.println(F("[hpmp] updating heatpump settings failed"));
+  }
 }
 
 void publishHassDiscovery()
@@ -351,10 +353,10 @@ void setup()
   setConfigSchema();
   setCommandSchema();
 
-  // Set up the heatpump callbacks  
+  // Set up the heatpump callbacks
   heatpump.setSettingsChangedCallback(hpSettingsChanged);
   heatpump.setStatusChangedCallback(hpStatusChanged);
-  heatpump.setPacketCallback(hpPacketDebug);  
+  heatpump.setPacketCallback(hpPacket);  
 
   // Allow control by IR remote
   heatpump.enableExternalUpdate();
