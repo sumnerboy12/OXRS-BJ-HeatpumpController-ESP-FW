@@ -72,6 +72,7 @@ void hpStatusChanged(heatpumpStatus status)
 {
   JsonDocument json;
   json["roomTemperature"]       = status.roomTemperature;
+  json["outdoorTemperature"]    = status.outdoorTemperature;
   json["operating"]             = status.operating;
 
   JsonObject timers = json["timers"].to<JsonObject>();;  
