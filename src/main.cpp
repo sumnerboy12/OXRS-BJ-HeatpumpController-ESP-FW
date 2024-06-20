@@ -74,6 +74,33 @@ void hpStatusChanged(heatpumpStatus status)
   json["roomTemperature"]       = status.roomTemperature;
   json["operating"]             = status.operating;
 
+  // Work out what the operating state is - i.e. if in HEAT mode is it actually heating?
+  heatpumpSettings settings = heatpump.getSettings();
+
+  if (strcmp(settings.power, "ON") == 0) {
+    if (status.operating) {
+      if (strcmp(settings.mode, "HEAT") == 0) {
+        json["operatingState"] = "heating";
+      } else if (strcmp(settings.mode, "COOL") == 0) {
+        json["operatingState"] = "cooling";
+      } else if (strcmp(settings.mode, "AUTO") == 0) {
+        if (status.roomTemperature > settings.temperature) {
+          json["operatingState"] = "cooling";
+        } else if (status.roomTemperature < settings.temperature) {
+          json["operatingState"] = "heating";
+        } else {
+          json["operatingState"] = "idle";
+        }
+      } else if (strcmp(settings.mode, "DRY") == 0) {
+        json["operatingState"] = "drying";
+      }
+    } else {
+      json["operatingState"] = "idle";
+    }
+  } else {
+    json["operatingState"] = "off";
+  }
+
   JsonObject timers = json["timers"].to<JsonObject>();;  
   timers["mode"]                = status.timers.mode;
   timers["onMinutesSet"]        = status.timers.onMinutesSet;
@@ -318,6 +345,9 @@ void publishHassDiscovery()
   json["curr_temp_t"] = oxrs.getMQTT()->getTelemetryTopic(topic);
   json["curr_temp_tpl"] = "{{ value_json.roomTemperature }}";
 
+  json["act_t"] = oxrs.getMQTT()->getTelemetryTopic(topic);
+  json["act_tpl"] = "{{ value_json.operatingState }}";
+  
   JsonArray fanModes = json["fan_modes"].to<JsonArray>();
   fanModes.add("auto");
   fanModes.add("1");
