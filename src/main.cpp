@@ -21,23 +21,29 @@ OXRS_8266 oxrs;
 #endif
 
 /*--------------------------- Constants -------------------------------*/
-// How often to publish the internal heatpump temperature
-#define       PUBLISH_TEMP_MS         60000
+// How often to publish status
+#define       PUBLISH_STAT_MS         300000
+
+// How often to publish telemetry
+#define       PUBLISH_TELE_MS         60000
 
 // How long before we revert to using the internal temperature
 // instead of the remote temp supplied by an external system
 #define       REMOTE_TEMP_TIMEOUT_MS  300000
 
 /*--------------------------- Global Variables ------------------------*/
-// the last time we published the room temp
-uint32_t lastTempSend   = 0L;
+// the last time we published status
+uint32_t lastStatPublish    = 0L;
+
+// the last time we published telemetry
+uint32_t lastTelePublish    = 0L;
 
 // the last time a remote temp value has been received
-uint32_t lastRemoteTemp = 0L;
+uint32_t lastRemoteTemp     = 0L;
 
 // will send all packets received from the heatpump to the telemetry topic
 // enabled/disabled by sending '{"debug": true|false}' to the command topic
-bool debugEnabled       = false;
+bool debugEnabled           = false;
 
 // only want to publish the home assistant discovery config once
 bool hassDiscoveryPublished = false;
@@ -340,7 +346,7 @@ void publishHassDiscovery()
   hass.getDiscoveryJson(json, id);
 
   json["name"] = "Heatpump";
-  json["opt"] = true;
+  json["opt"] = false;
 
   json["curr_temp_t"] = oxrs.getMQTT()->getTelemetryTopic(topic);
   json["curr_temp_tpl"] = "{{ value_json.roomTemperature }}";
@@ -421,13 +427,19 @@ void loop()
   // Check for any updates to the heatpump
   heatpump.sync();
 
-  // Publish temp periodically
-  if ((millis() - lastTempSend) >= PUBLISH_TEMP_MS) {
-    hpStatusChanged(heatpump.getStatus());
-    lastTempSend = millis();
+  // Publish status periodically
+  if ((millis() - lastStatPublish) >= PUBLISH_STAT_MS) {
+    hpSettingsChanged();
+    lastStatPublish = millis();
   }
 
-  // Reset to local temp sensor after 5 minutes of no remote temp udpates
+  // Publish telemetry periodically
+  if ((millis() - lastTelePublish) >= PUBLISH_TELE_MS) {
+    hpStatusChanged(heatpump.getStatus());
+    lastTelePublish = millis();
+  }
+
+  // Reset to local temp sensor if no remote temp udpates
   if ((millis() - lastRemoteTemp) >= REMOTE_TEMP_TIMEOUT_MS) {
     heatpump.setRemoteTemperature(0);
     lastRemoteTemp = millis();
