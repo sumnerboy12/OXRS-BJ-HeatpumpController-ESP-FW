@@ -70,7 +70,37 @@ void hpSettingsChanged()
   json["fan"]         = settings.fan;
   json["vane"]        = settings.vane;
   json["wideVane"]    = settings.wideVane;
- 
+
+  if (hass.isDiscoveryEnabled()) {
+    // Convert to Home Assistant fan modes
+    if (strcmp(settings.fan, "QUIET") == 0) {
+      json["fan"] = "DIFFUSE";
+    } else if (strcmp(settings.fan, "1") == 0) {
+      json["fan"] = "LOW";
+    } else if (strcmp(settings.fan, "2") == 0) {
+      json["fan"] = "MEDIUM";
+    } else if (strcmp(settings.fan, "3") == 0) {
+      json["fan"] = "MEDIUM";
+    } else if (strcmp(settings.fan, "4") == 0) {
+      json["fan"] = "HIGH";
+    } else {
+      json["fan"] = settings.fan;
+    }
+
+    // Convert to Home Assistant swing modes
+    if (strcmp(settings.vane, "AUTO") == 0 && strcmp(settings.wideVane, "<>") == 0) {
+      json["swing"] = "ON";
+    } else if (strcmp(settings.vane, "SWING") == 0 && strcmp(settings.wideVane, "SWING") == 0) {
+      json["swing"] = "BOTH";
+    } else if (strcmp(settings.vane, "SWING") == 0) {
+      json["swing"] = "VERTICAL";
+    } else if (strcmp(settings.wideVane, "SWING") == 0) {
+      json["swing"] = "HORIZONTAL";
+    } else {
+      json["swing"] = "OFF";
+    }
+  }
+
   oxrs.publishStatus(json.as<JsonVariant>());
 }
 
@@ -80,31 +110,31 @@ void hpStatusChanged(heatpumpStatus status)
   json["roomTemperature"]       = status.roomTemperature;
   json["operating"]             = status.operating;
 
-  // Work out what the operating state is - i.e. if in HEAT mode is it actually heating?
+  // Work out the operating state - i.e. if in HEAT mode is it actually heating?
   heatpumpSettings settings = heatpump.getSettings();
 
   if (strcmp(settings.power, "ON") == 0) {
     if (status.operating) {
       if (strcmp(settings.mode, "HEAT") == 0) {
-        json["operatingState"] = "heating";
+        json["operatingState"] = "HEATING";
       } else if (strcmp(settings.mode, "COOL") == 0) {
-        json["operatingState"] = "cooling";
+        json["operatingState"] = "COOLING";
       } else if (strcmp(settings.mode, "AUTO") == 0) {
         if (status.roomTemperature > settings.temperature) {
-          json["operatingState"] = "cooling";
+          json["operatingState"] = "COOLING";
         } else if (status.roomTemperature < settings.temperature) {
-          json["operatingState"] = "heating";
+          json["operatingState"] = "HEATING";
         } else {
-          json["operatingState"] = "idle";
+          json["operatingState"] = "IDLE";
         }
       } else if (strcmp(settings.mode, "DRY") == 0) {
-        json["operatingState"] = "drying";
+        json["operatingState"] = "DRYING";
       }
     } else {
-      json["operatingState"] = "idle";
+      json["operatingState"] = "IDLE";
     }
   } else {
-    json["operatingState"] = "off";
+    json["operatingState"] = "OFF";
   }
 
   JsonObject timers = json["timers"].to<JsonObject>();;  
@@ -271,7 +301,19 @@ void jsonCommand(JsonVariant json)
 
   if (json.containsKey("fan"))
   {
-    heatpump.setFanSpeed(json["fan"].as<const char *>());
+    const char * fan = json["fan"].as<const char *>();
+    // Convert from Home Assistant fan modes
+    if (strcmp(fan, "DIFFUSE") == 0) {
+      heatpump.setFanSpeed("QUIET");
+    } else if (strcmp(fan, "LOW") == 0) {
+      heatpump.setFanSpeed("1");
+    } else if (strcmp(fan, "MEDIUM") == 0) {
+      heatpump.setFanSpeed("2");
+    } else if (strcmp(fan, "HIGH") == 0) {
+      heatpump.setFanSpeed("4");
+    } else {
+      heatpump.setFanSpeed(fan);
+    }
     update = true;
   }
 
@@ -284,6 +326,29 @@ void jsonCommand(JsonVariant json)
   if (json.containsKey("wideVane"))
   {
     heatpump.setWideVaneSetting(json["wideVane"].as<const char *>());
+    update = true;
+  }
+
+  if (json.containsKey("swing"))
+  {
+    const char * swing = json["swing"].as<const char *>();
+    // Convert from Home Assistant swing modes
+    if (strcmp(swing, "ON") == 0) {
+      heatpump.setVaneSetting("AUTO");
+      heatpump.setWideVaneSetting("<>");
+    } else if (strcmp(swing, "VERTICAL") == 0) {
+      heatpump.setVaneSetting("SWING");
+      heatpump.setWideVaneSetting("|");
+    } else if (strcmp(swing, "HORIZONTAL") == 0) {
+      heatpump.setVaneSetting("1");
+      heatpump.setWideVaneSetting("SWING");
+    } else if (strcmp(swing, "BOTH") == 0) {
+      heatpump.setVaneSetting("SWING");
+      heatpump.setWideVaneSetting("SWING");
+    } else {
+      heatpump.setVaneSetting("1");
+      heatpump.setWideVaneSetting("|");
+    }
     update = true;
   }
 
@@ -352,34 +417,10 @@ void publishHassDiscovery()
   json["curr_temp_tpl"] = "{{ value_json.roomTemperature }}";
 
   json["act_t"] = oxrs.getMQTT()->getTelemetryTopic(topic);
-  json["act_tpl"] = "{{ value_json.operatingState }}";
+  json["act_tpl"] = "{{ value_json.operatingState | lower }}";
   
-  JsonArray fanModes = json["fan_modes"].to<JsonArray>();
-  fanModes.add("auto");
-  fanModes.add("quiet");
-  fanModes.add("1");
-  fanModes.add("2");
-  fanModes.add("3");
-  fanModes.add("4");
-
-  json["fan_mode_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
-  json["fan_mode_cmd_tpl"] = "{\"fan\":\"{{ value | upper }}\"}";
-  json["fan_mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
-  json["fan_mode_stat_tpl"] = "{{ value_json.fan | lower }}";
-
-  JsonArray swingModes = json["swing_modes"].to<JsonArray>();
-  swingModes.add("auto");
-  swingModes.add("1");
-  swingModes.add("2");
-  swingModes.add("3");
-  swingModes.add("4");
-  swingModes.add("5");
-  swingModes.add("swing");
-
-  json["swing_mode_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
-  json["swing_mode_cmd_tpl"] = "{\"vane\":\"{{ value | upper }}\"}";
-  json["swing_mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
-  json["swing_mode_stat_tpl"] = "{{ value_json.vane | lower }}";
+  json["power_command_topic"] = oxrs.getMQTT()->getCommandTopic(topic);
+  json["power_command_template"] = "{\"power\":\"{{ value }}\"}";
 
   JsonArray modes = json["modes"].to<JsonArray>();
   modes.add("off");
@@ -393,14 +434,35 @@ void publishHassDiscovery()
   json["mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
   json["mode_stat_tpl"] = "{% if value_json.power == 'OFF' %}off{% else %}{{ value_json.mode | lower }}{% endif %}";
 
-  json["power_command_topic"] = oxrs.getMQTT()->getCommandTopic(topic);
-  json["power_command_template"] = "{\"power\":\"{{ value }}\"}";
-
   json["temp_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
   json["temp_cmd_tpl"] = "{\"temperature\":{{ value }}}";
   json["temp_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
   json["temp_stat_tpl"] = "{{ value_json.temperature }}";
   json["temp_unit"] = "C";
+
+  JsonArray fanModes = json["fan_modes"].to<JsonArray>();
+  fanModes.add("auto");
+  fanModes.add("diffuse");
+  fanModes.add("low");
+  fanModes.add("medium");
+  fanModes.add("high");
+
+  json["fan_mode_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
+  json["fan_mode_cmd_tpl"] = "{\"fan\":\"{{ value | upper }}\"}";
+  json["fan_mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
+  json["fan_mode_stat_tpl"] = "{{ value_json.fan | lower }}";
+
+  JsonArray swingModes = json["swing_modes"].to<JsonArray>();
+  swingModes.add("off");
+  swingModes.add("on");
+  swingModes.add("vertical");
+  swingModes.add("horizontal");
+  swingModes.add("both");
+
+  json["swing_mode_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
+  json["swing_mode_cmd_tpl"] = "{\"swing\":\"{{ value | upper }}\"}";
+  json["swing_mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
+  json["swing_mode_stat_tpl"] = "{{ value_json.swing | lower }}";
 
   // Only publish once on boot
   hassDiscoveryPublished = hass.publishDiscoveryJson(json, component, id);
