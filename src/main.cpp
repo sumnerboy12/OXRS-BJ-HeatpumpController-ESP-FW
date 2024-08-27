@@ -356,6 +356,7 @@ void publishHassDiscovery()
   
   JsonArray fanModes = json["fan_modes"].to<JsonArray>();
   fanModes.add("auto");
+  fanModes.add("quiet");
   fanModes.add("1");
   fanModes.add("2");
   fanModes.add("3");
@@ -365,6 +366,20 @@ void publishHassDiscovery()
   json["fan_mode_cmd_tpl"] = "{\"fan\":\"{{ value | upper }}\"}";
   json["fan_mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
   json["fan_mode_stat_tpl"] = "{{ value_json.fan | lower }}";
+
+  JsonArray swingModes = json["swing_modes"].to<JsonArray>();
+  swingModes.add("auto");
+  swingModes.add("1");
+  swingModes.add("2");
+  swingModes.add("3");
+  swingModes.add("4");
+  swingModes.add("5");
+  swingModes.add("swing");
+
+  json["swing_mode_cmd_t"] = oxrs.getMQTT()->getCommandTopic(topic);
+  json["swing_mode_cmd_tpl"] = "{\"vane\":\"{{ value | upper }}\"}";
+  json["swing_mode_stat_t"] = oxrs.getMQTT()->getStatusTopic(topic);
+  json["swing_mode_stat_tpl"] = "{{ value_json.vane | lower }}";
 
   JsonArray modes = json["modes"].to<JsonArray>();
   modes.add("off");
