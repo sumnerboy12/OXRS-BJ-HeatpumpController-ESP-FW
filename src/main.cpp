@@ -407,6 +407,8 @@ void publishHassDiscovery()
 
   json["name"] = "Heatpump";
   json["opt"] = false;
+  json["min_temp"] = 16;
+  json["max_temp"] = 31;
 
   json["curr_temp_t"] = oxrs.getMQTT()->getTelemetryTopic(topic);
   json["curr_temp_tpl"] = "{{ value_json.roomTemperature }}";
