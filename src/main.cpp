@@ -88,9 +88,7 @@ void hpSettingsChanged()
     }
 
     // Convert to Home Assistant swing modes
-    if (strcmp(settings.vane, "AUTO") == 0 && strcmp(settings.wideVane, "<>") == 0) {
-      json["swing"] = "ON";
-    } else if (strcmp(settings.vane, "SWING") == 0 && strcmp(settings.wideVane, "SWING") == 0) {
+    if (strcmp(settings.vane, "SWING") == 0 && strcmp(settings.wideVane, "SWING") == 0) {
       json["swing"] = "BOTH";
     } else if (strcmp(settings.vane, "SWING") == 0) {
       json["swing"] = "VERTICAL";
@@ -333,10 +331,7 @@ void jsonCommand(JsonVariant json)
   {
     const char * swing = json["swing"].as<const char *>();
     // Convert from Home Assistant swing modes
-    if (strcmp(swing, "ON") == 0) {
-      heatpump.setVaneSetting("AUTO");
-      heatpump.setWideVaneSetting("<>");
-    } else if (strcmp(swing, "VERTICAL") == 0) {
+    if (strcmp(swing, "VERTICAL") == 0) {
       heatpump.setVaneSetting("SWING");
       heatpump.setWideVaneSetting("|");
     } else if (strcmp(swing, "HORIZONTAL") == 0) {
@@ -454,7 +449,6 @@ void publishHassDiscovery()
 
   JsonArray swingModes = json["swing_modes"].to<JsonArray>();
   swingModes.add("off");
-  swingModes.add("on");
   swingModes.add("vertical");
   swingModes.add("horizontal");
   swingModes.add("both");
