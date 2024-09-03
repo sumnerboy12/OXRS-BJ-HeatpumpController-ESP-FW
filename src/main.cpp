@@ -210,7 +210,7 @@ void setCommandSchema()
 
   JsonObject temperature = json["temperature"].to<JsonObject>();
   temperature["type"] = "number";
-  temperature["minimum"] = 10;
+  temperature["minimum"] = 16;
   temperature["maximum"] = 31;
 
   JsonObject fan = json["fan"].to<JsonObject>();
